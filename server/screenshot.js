@@ -10,7 +10,8 @@ class ScreenshotError extends Error {
   }
 }
 
-async function analyzeScreenshot(image, { env = process.env, fetchImpl = fetch } = {}) {
+// Cheap checks that run before the rate limiter, so bad input or a missing key never uses quota.
+function checkScreenshotRequest(image, env = process.env) {
   if (typeof image !== 'string' || !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(image)) {
     throw new ScreenshotError(400, 'Upload a PNG, JPEG, or WebP screenshot.')
   }
@@ -18,6 +19,10 @@ async function analyzeScreenshot(image, { env = process.env, fetchImpl = fetch }
   if (!aiConfigured(env)) {
     throw new ScreenshotError(500, 'Screenshot analysis is not configured. Set OPENROUTER_API_KEY on the backend.')
   }
+}
+
+async function analyzeScreenshot(image, { env = process.env, fetchImpl = fetch } = {}) {
+  checkScreenshotRequest(image, env)
   const extractedAt = new Date()
   const data = await chatCompletion({
     messages: [{ role: 'user', content: [
@@ -39,17 +44,22 @@ async function analyzeScreenshot(image, { env = process.env, fetchImpl = fetch }
   }
 }
 
-const router = express.Router()
-router.post('/', express.json({ limit: '7mb' }), async (req, res) => {
-  try {
-    // Analyse only: the image lives in memory for this request and is never logged or saved.
-    res.json(await analyzeScreenshot(req.body?.image))
-  } catch (error) {
-    res.status(error.status || 500).json({ message: error.status ? error.message : 'Screenshot analysis failed.', ...(error.providerStatus ? { providerStatus: error.providerStatus } : {}) })
-  }
-})
-router.use((error, req, res, next) => {
-  res.status(error.type === 'entity.too.large' ? 413 : 400).json({ message: error.type === 'entity.too.large' ? 'Screenshot is too large. Maximum file size is 5 MB.' : 'Invalid screenshot request.' })
-})
+function sendError(res, error) {
+  res.status(error.status || 500).json({ message: error.status ? error.message : 'Screenshot analysis failed.', ...(error.providerStatus ? { providerStatus: error.providerStatus } : {}) })
+}
 
-module.exports = { router, analyzeScreenshot }
+function createScreenshotRouter({ limit = (req, res, next) => next(), analyze = analyzeScreenshot } = {}) {
+  const router = express.Router()
+  router.post('/', express.json({ limit: '7mb' }), (req, res, next) => {
+    try { checkScreenshotRequest(req.body?.image); next() } catch (error) { sendError(res, error) }
+  }, limit, async (req, res) => {
+    // Analyse only: the image lives in memory for this request and is never logged or saved.
+    try { res.json(await analyze(req.body.image)) } catch (error) { sendError(res, error) }
+  })
+  router.use((error, req, res, next) => {
+    res.status(error.type === 'entity.too.large' ? 413 : 400).json({ message: error.type === 'entity.too.large' ? 'Screenshot is too large. Maximum file size is 5 MB.' : 'Invalid screenshot request.' })
+  })
+  return router
+}
+
+module.exports = { createScreenshotRouter, analyzeScreenshot, checkScreenshotRequest }

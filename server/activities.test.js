@@ -27,23 +27,29 @@ test('uses configured private backend AI client and sends only preferences plus 
   assert.deepEqual(result,activities)
   await assert.rejects(suggestActivities(prefs,{env,fetchImpl:async()=>({ok:true,json:async()=>({choices:[{message:{content:'{}'}}]})})}),{status:502})
 })
-test('endpoint blocks parallel requests and rate limits attempts with retry header', async () => {
+test('endpoint validates before the shared rate limiter, and a 429 from the limiter stops the AI call', async () => {
   const express=require('express');const app=express();app.use(express.json())
-  let release, started
-  const running=new Promise(resolve=>{started=resolve})
-  let calls=0
-  app.use(createActivityRouter({suggest:async()=>{calls++;if(calls===1){started();await new Promise(resolve=>{release=resolve})} return activities}}))
+  let limited=0, calls=0, block=false
+  const limit=(req,res,next)=>{limited++;if(block)return res.status(429).json({message:'Rate limit exceeded.',queries_used:5});next()}
+  app.use(createActivityRouter({limit,suggest:async()=>{calls++;return activities}}))
   const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.on('listening',resolve))
-  const url=`http://127.0.0.1:${server.address().port}`
-  const post=(body=prefs)=>fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+  const post=(body=prefs)=>fetch(`http://127.0.0.1:${server.address().port}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
   try {
-    assert.equal((await post({...prefs,extra:'bad'})).status,400)
-    const first=post();await running
-    const duplicate=await post();assert.equal(duplicate.status,429);assert.ok(duplicate.headers.get('retry-after'))
-    release();assert.equal((await first).status,200)
-    for(let i=0;i<4;i++)assert.equal((await post()).status,200)
-    assert.equal((await post()).status,429);assert.equal(calls,5)
-  }finally{release?.();await new Promise(resolve=>server.close(resolve))}
+    assert.equal((await post({...prefs,extra:'bad'})).status,400);assert.equal(limited,0)
+    assert.equal((await post()).status,200);assert.equal(limited,1);assert.equal(calls,1)
+    block=true
+    const response=await post();assert.equal(response.status,429);assert.equal((await response.json()).queries_used,5);assert.equal(calls,1)
+  }finally{await new Promise(resolve=>server.close(resolve))}
+})
+test('missing OpenRouter key answers 500 before the limiter, never 503', async () => {
+  const express=require('express');const app=express();app.use(express.json())
+  let limited=0
+  app.use(createActivityRouter({env:{},limit:(req,res,next)=>{limited++;next()}}))
+  const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.on('listening',resolve))
+  try {
+    const response=await fetch(`http://127.0.0.1:${server.address().port}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(prefs)})
+    assert.equal(response.status,500);assert.equal(limited,0)
+  }finally{await new Promise(resolve=>server.close(resolve))}
 })
 test('built-in suggestions cover preference combinations and storage is member/group scoped', async()=>{
   const { builtInActivities, storageKey, validSaved }=await import('../client-vue/src/activity-utils.mjs')
@@ -57,7 +63,7 @@ test('built-in suggestions cover preference combinations and storage is member/g
   assert.equal(validSaved({version:1,source:'ai',activities:[]}),false)
 })
 
-test('provider failure returns sanitized error and releases in-flight lock for retry', async () => {
+test('provider failure returns a sanitized error and a retry can succeed', async () => {
   const express=require('express');const app=express();app.use(express.json())
   let calls=0
   app.use(createActivityRouter({suggest:async()=>{calls++;if(calls===1)throw Object.assign(new Error('AI provider HTTP 429: Provider rate limit or quota exceeded.'),{status:502});return activities}}))
