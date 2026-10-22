@@ -51,7 +51,7 @@ test('missing OpenRouter key answers 500 before the limiter, never 503', async (
     assert.equal(response.status,500);assert.equal(limited,0)
   }finally{await new Promise(resolve=>server.close(resolve))}
 })
-test('built-in suggestions cover preference combinations and storage is member/group scoped', async()=>{
+test('built-in suggestions cover preference combinations and storage uses the project slug', async()=>{
   const { builtInActivities, storageKey, validSaved }=await import('../client-vue/src/activity-utils.mjs')
   for(const interest of ['outdoors','fitness','creative','relaxing','social'])for(const company of ['solo','friends'])for(const location of ['indoors','outdoors'])for(const minutes of [10,20,30,60]){
     const prefs={interests:[interest],company,location,minutes}
@@ -59,7 +59,7 @@ test('built-in suggestions cover preference combinations and storage is member/g
     assert.equal(validateActivities({activities:result},prefs).length,3)
     assert.ok(validSaved({version:1,source:'built-in',activities:result}))
   }
-  assert.notEqual(storageKey('g','a'),storageKey('g','b'));assert.notEqual(storageKey('g','a'),storageKey('h','a'))
+  assert.equal(storageKey,'ail-ay2627-s1-kaavya-touchgrass:activities')
   assert.equal(validSaved({version:1,source:'ai',activities:[]}),false)
 })
 

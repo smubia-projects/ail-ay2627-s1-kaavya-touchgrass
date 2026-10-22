@@ -379,3 +379,9 @@ body { font-size: 16px; }
   .demo-member .member-identity span, .demo-member .member-total span { font-size: 12px; }
   .demo-days { grid-template-columns: repeat(3,minmax(0,1fr)); }
 }
+/* AI Lodge showcase: no-login shell */
+.demo-banner-inline { position: static; padding: 0; background: none; border: 0; margin-bottom: 18px; }
+.privacy-note { font-size: 13px; color: var(--muted); border-left: 3px solid var(--sage); padding-left: 10px; }
+.sidebar .privacy-note { color: #d2dcc2; border-color: var(--mustard); font-size: 11px; margin: 14px 4px; }
+.nav-label-short { display: none; }
+@media (max-width: 767px) { .mobile-navigation .nav-label-long { display: none; } .mobile-navigation .nav-label-short { display: inline; } }

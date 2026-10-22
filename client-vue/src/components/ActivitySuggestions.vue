@@ -1,10 +1,9 @@
-﻿<script setup>
+<script setup>
 import { Trees, Dumbbell, Palette, Coffee, Users, Sprout, CheckCircle2, RefreshCw } from 'lucide-vue-next'
 import EmptySprout from './EmptySprout.vue'
-import { ref, computed, watch, onBeforeUnmount } from 'vue'
-import api from '../api'
+import { ref, computed, onBeforeUnmount } from 'vue'
+import api, { errorMessage } from '../api'
 import { interestOptions, storageKey, builtInActivities, validSaved } from '../activity-utils.mjs'
-const props = defineProps({ accountId: { type: String, required: true }, groupCode: { type: String, required: true }, memberId: { type: String, required: true } })
 const interests = ref(['relaxing'])
 const minutes = ref(20)
 const company = ref('solo')
@@ -17,24 +16,21 @@ const source = ref('')
 const completedCount = computed(() => activities.value.filter(a => a.completed).length)
 const icons = { outdoors: Trees, fitness: Dumbbell, creative: Palette, relaxing: Coffee, social: Users }
 const fallbackAvailable = ref(false)
-const key = computed(() => 'touchgrass-account:' + props.accountId + ':' + storageKey(props.groupCode, props.memberId))
 let requestId = 0
 onBeforeUnmount(() => { requestId++ })
 function preferences() { return { interests: [...interests.value], minutes: minutes.value, company: company.value, location: location.value } }
-watch(key, () => {
-  requestId++
-  busy.value = false
-  activities.value = []; source.value = ''; error.value = ''; storageError.value = ''; fallbackAvailable.value = false
+function load() {
   try {
-    const raw = localStorage.getItem(key.value)
+    const raw = localStorage.getItem(storageKey)
     if (!raw) return
     const saved = JSON.parse(raw)
     if (!validSaved(saved)) throw new Error('Invalid saved suggestions')
     activities.value = saved.activities; source.value = saved.source
   } catch { storageError.value = 'Could not load browser-local activities. You can generate a new set.' }
-}, { immediate: true })
+}
+load()
 function persist() {
-  try { localStorage.setItem(key.value, JSON.stringify({ version: 1, source: source.value, activities: activities.value })); storageError.value = '' }
+  try { localStorage.setItem(storageKey, JSON.stringify({ version: 1, source: source.value, activities: activities.value })); storageError.value = '' }
   catch { storageError.value = 'Browser storage is unavailable or full. Changes will only last while this view is open.' }
 }
 function toggle(index) { activities.value[index].completed = !activities.value[index].completed; persist() }
@@ -50,7 +46,7 @@ async function suggest() {
     activities.value = saved.activities; source.value = 'ai'; persist()
   } catch (failure) {
     if (id !== requestId) return
-    error.value = failure.response?.data?.message || 'Could not generate activities. Retry or choose built-in suggestions below.'
+    error.value = errorMessage(failure, 'Could not generate activities. Retry or choose built-in suggestions below.')
     fallbackAvailable.value = true
   } finally { if (id === requestId) busy.value = false }
 }
@@ -66,7 +62,7 @@ function useBuiltIn() {
     <div class="card-body p-4">
       <h3 class="h5 feature-heading"><span class="feature-icon feature-mustard"><Sprout class="icon-card" aria-hidden="true" /></span>Touch Grass activities</h3>
       <p>Make a little room for life beyond the screen.</p><p class="storage-note">Saved in this browser</p>
-      <details class="data-disclosure"><summary>How it works · About your data</summary><p>Suggestions and completion stay in this browser for your account and group, without syncing across devices. Clearing browser data removes them. Only selected preferences are sent for AI suggestions. Completion is self-reported, not verified offline time, and never changes leaderboard scores. A new set replaces the current saved set.</p></details>
+      <details class="data-disclosure"><summary>How it works · About your data</summary><p>Suggestions and completion stay in this browser, without syncing across devices. Clearing browser data removes them. Only your selected preferences are sent to the AI provider. Completion is self-reported, not verified offline time. A new set replaces the current saved set.</p></details>
       <p v-if="!activities.length && !busy" class="empty-help"><EmptySprout />No activities yet. Choose your interests, time, company and setting, then click Suggest activities below.</p>
       <form @submit.prevent="suggest">
         <fieldset :disabled="busy">
