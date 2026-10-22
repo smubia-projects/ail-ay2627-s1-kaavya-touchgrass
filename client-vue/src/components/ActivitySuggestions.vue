@@ -2,7 +2,7 @@
 import { Trees, Dumbbell, Palette, Coffee, Users, Sprout, CheckCircle2, RefreshCw } from 'lucide-vue-next'
 import EmptySprout from './EmptySprout.vue'
 import { ref, computed, onBeforeUnmount } from 'vue'
-import api, { errorMessage } from '../api'
+import api, { errorMessage, offersFallback } from '../api'
 import { interestOptions, storageKey, builtInActivities, validSaved } from '../activity-utils.mjs'
 const interests = ref(['relaxing'])
 const minutes = ref(20)
@@ -47,7 +47,7 @@ async function suggest() {
   } catch (failure) {
     if (id !== requestId) return
     error.value = errorMessage(failure, 'Could not generate activities. Retry or choose built-in suggestions below.')
-    fallbackAvailable.value = true
+    fallbackAvailable.value = offersFallback(failure)
   } finally { if (id === requestId) busy.value = false }
 }
 function useBuiltIn() {

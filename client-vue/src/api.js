@@ -33,4 +33,9 @@ export function errorMessage(error, fallback) {
   return error?.response?.data?.message || fallback
 }
 
+/** Non-AI substitutes are for provider errors only: over the AI limit (429) or with the demo paused (503) the feature stops. */
+export function offersFallback(error) {
+  return !error?.handledByRateLimit
+}
+
 export default api

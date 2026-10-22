@@ -6,7 +6,7 @@ import { createServer } from 'vite'
 // api.js reads import.meta.env, so load it through Vite. Requests use a stub adapter: no network.
 const server = await createServer({ root: fileURLToPath(new URL('..', import.meta.url)), configFile: false, server: { middlewareMode: true, hmr: false, ws: false, watch: null }, appType: 'custom' })
 after(() => server.close())
-const { default: api, limits, errorMessage } = await server.ssrLoadModule('/src/api.js')
+const { default: api, limits, errorMessage, offersFallback } = await server.ssrLoadModule('/src/api.js')
 
 async function respond(status, data) {
   const adapter = async config => { const error = new Error('HTTP ' + status); error.config = config; error.response = { status, data, config }; throw error }
@@ -19,6 +19,7 @@ test('429 opens the CTA with queries_used from the engine body and never the pau
   assert.equal(limits.cta.count, 5)
   assert.equal(limits.paused, '')
   assert.match(errorMessage(error, 'x'), /free AI requests/)
+  assert.equal(offersFallback(error), false)  // over the limit the feature stops: no built-in substitute
   limits.cta.open = false
 })
 
@@ -27,6 +28,7 @@ test('503 shows the paused notice with the body message and never the CTA', asyn
   assert.equal(limits.cta.open, false)
   assert.equal(limits.paused, 'This demo is temporarily paused. Check back soon.')
   assert.equal(errorMessage(error, 'x'), '')
+  assert.equal(offersFallback(error), false)
   limits.paused = ''
 })
 
@@ -35,4 +37,5 @@ test('other errors keep their own message', async () => {
   assert.equal(limits.cta.open, false)
   assert.equal(limits.paused, '')
   assert.equal(errorMessage(error, 'x'), 'AI is not configured on the backend.')
+  assert.equal(offersFallback(error), true)  // provider/config errors may still offer built-in suggestions
 })

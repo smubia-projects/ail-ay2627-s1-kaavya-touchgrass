@@ -8,7 +8,7 @@ const PROJECT_CONFIG = {
   emoji: '🌱',
   accentColor: '#304b31',
   headline: 'Time to touch some grass!',
-  description: "You've used all {count} free AI requests in this demo. The demo leaderboard, built-in activity ideas and your diary still work. In SMUBIA's AI Lodge, you can learn to build AI apps like this from scratch.",
+  description: "You've used all {count} free AI requests in this demo. The demo leaderboard and your diary still work. In SMUBIA's AI Lodge, you can learn to build AI apps like this from scratch.",
   programme: 'AI Lodge',
   programmeLink: 'https://www.smubia.com/ailodge',
   githubLink: 'https://github.com/smubia-projects/ail-ay2627-s1-kaavya-touchgrass',

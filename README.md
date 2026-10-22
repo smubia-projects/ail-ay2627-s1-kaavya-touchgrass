@@ -40,7 +40,7 @@ The bundled fixture (`client-vue/src/demo/leaderboard.json`) is generated offlin
 ### Diary and activities
 
 - The diary has a Monday-Sunday strip, week navigation, hours/minutes inputs, a weekly bar chart and reflection prompts. Weekly averages include only logged days.
-- Activities offer Outdoors, Fitness, Creative, Relaxing and Social interests; 10/20/30/60-minute budgets; Solo / With friends; Indoors / Outdoors. Three cards come with first steps and completion toggles. If AI is unavailable or rate-limited, clearly labelled **built-in suggestions (not AI-generated)** are offered.
+- Activities offer Outdoors, Fitness, Creative, Relaxing and Social interests; 10/20/30/60-minute budgets; Solo / With friends; Indoors / Outdoors. Three cards come with first steps and completion toggles. If the AI provider fails, clearly labelled **built-in suggestions (not AI-generated)** are offered; over the AI limit the AI Lodge invitation opens instead and no substitute is offered.
 
 ## 4. AI Integration
 
@@ -107,6 +107,6 @@ npm run build --prefix client-vue
 - **Screenshot-backed does not mean authenticity verified.** An edited screenshot can look legitimate to the model.
 - Clicking Analyse sends the screenshot to a third-party AI provider; avoid images that show other personal information. TouchGrass never logs or stores the image or the result; provider retention is outside this repository's control.
 - The API validates the data-URL format, a 7 MiB JSON-body limit (16 KiB on other routes), real calendar dates and integer minutes from 0 to 1,440. Provider requests time out after 60 seconds.
-- AI routes are limited per IP by the shared AI Lodge engine; the demo, diary and built-in suggestions keep working when the limit is reached.
+- AI routes are limited per IP by the shared AI Lodge engine; over the limit the AI features stop (429 + AI Lodge invitation); the demo leaderboard and diary keep working.
 - The diary and activities live in this browser only: no sync, no encryption, and clearing browser data removes them.
 - The group competition itself (accounts, invites, live rankings) is not part of this showcase; the leaderboard is fictional sample data.
