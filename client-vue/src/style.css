@@ -385,3 +385,4 @@ body { font-size: 16px; }
 .sidebar .privacy-note { color: #d2dcc2; border-color: var(--mustard); font-size: 11px; margin: 14px 4px; }
 .nav-label-short { display: none; }
 @media (max-width: 767px) { .mobile-navigation .nav-label-long { display: none; } .mobile-navigation .nav-label-short { display: inline; } }
+.paused-notice { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }

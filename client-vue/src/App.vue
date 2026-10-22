@@ -7,6 +7,8 @@ import ExploreDemo from './components/ExploreDemo.vue'
 import ScreenshotCheckIn from './components/ScreenshotCheckIn.vue'
 import ActivitySuggestions from './components/ActivitySuggestions.vue'
 import UserDiary from './components/UserDiary.vue'
+import RateLimitCTA from './components/RateLimitCTA.vue'
+import { limits, dismissCta, dismissPaused } from './api'
 
 // Public, no-login showcase: demo leaderboard (bundled fixture), analyse-only screenshot
 // check, AI activity ideas and a browser-local diary. No accounts, groups or server storage.
@@ -33,6 +35,10 @@ function navigate(next) {
     <div class="workspace">
       <header class="mobile-topbar"><BrandMark /></header>
       <main id="main-content" class="main-content" tabindex="-1">
+        <div v-if="limits.paused" class="alert alert-warning paused-notice" role="status" aria-live="polite" data-testid="demo-paused">
+          <span><strong>Demo paused.</strong> {{ limits.paused }} The demo leaderboard and your diary still work.</span>
+          <button type="button" class="btn-close" aria-label="Dismiss notice" @click="dismissPaused"></button>
+        </div>
         <HowItWorks />
         <ExploreDemo v-show="view === 'leaderboard'" />
         <section v-show="view === 'checkins'" class="dedicated-view">
@@ -51,4 +57,5 @@ function navigate(next) {
       <div class="mobile-navigation"><AppNavigation :active="view" @navigate="navigate" /></div>
     </div>
   </div>
+  <RateLimitCTA v-if="limits.cta.open" :queries-made="limits.cta.count" @dismiss="dismissCta" />
 </template>
