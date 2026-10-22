@@ -1,29 +1,18 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createDeploymentConfig } from '../deployment-config.mjs'
+import { readFile } from 'node:fs/promises'
 
-const env = { VITE_API_BASE_URL: '/api', RENDER_API_ORIGIN: 'https://touchgrass-example.onrender.com' }
-test('same-origin API proxy precedes SPA fallback and never caches session responses', () => {
-  const config = createDeploymentConfig(env)
-  assert.deepEqual(config.rewrites[0], { source: '/api/:path*', destination: 'https://touchgrass-example.onrender.com/api/:path*' })
-  assert.equal(config.rewrites[1].destination, '/index.html')
-  assert.equal(config.installCommand, 'npx --yes pnpm@10.34.7 install --frozen-lockfile')
-  assert.equal(config.buildCommand, 'npx --yes pnpm@10.34.7 run build')
-  assert.ok(config.headers[0].headers.some(h => h.key === 'Cache-Control' && h.value === 'no-store'))
-  assert.ok(config.headers[0].headers.some(h => h.key === 'x-vercel-enable-rewrite-caching' && h.value === '0'))
-  assert.equal(config.functions, undefined)
-})
-test('deployment fails closed for missing or unsafe routing environment without exposing values', () => {
-  for (const origin of ['', 'not-a-url', 'http://example.test', 'https://user:private@example.test', 'https://example.test/api', 'https://example.test?token=private']) {
-    assert.throws(() => createDeploymentConfig({ ...env, RENDER_API_ORIGIN: origin }), error => !error.message.includes('private') && /RENDER_API_ORIGIN/.test(error.message))
-  }
-  for (const base of [undefined, 'http://localhost:8000/api', 'https://example.test/api']) {
-    assert.throws(() => createDeploymentConfig({ ...env, VITE_API_BASE_URL: base }), /VITE_API_BASE_URL/)
-  }
+test('Vercel builds the static Vite app with npm and has no API proxy', async () => {
+  const config = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'))
+  assert.equal(config.framework, 'vite')
+  assert.equal(config.installCommand, 'npm ci')
+  assert.equal(config.outputDirectory, 'dist')
+  // The browser calls Cloud Run directly via VITE_API_BASE, so the rate limiter sees the real client IP.
+  assert.ok(!JSON.stringify(config.rewrites).includes('/api'))
 })
 
-
-test('production proxy targets the deployed Render backend by default', () => {
-  const config = createDeploymentConfig({ VITE_API_BASE_URL: '/api' })
-  assert.equal(config.rewrites[0].destination, 'https://touchgrass-api-7x8m.onrender.com/api/:path*')
+test('API base comes from VITE_API_BASE, without credentials or CSRF headers', async () => {
+  const source = await readFile(new URL('./api.js', import.meta.url), 'utf8')
+  assert.match(source, /import\.meta\.env\.VITE_API_BASE/)
+  assert.ok(!/withCredentials|X-CSRF-Token|onrender\.com/.test(source))
 })

@@ -1,2 +1,0 @@
-minimumReleaseAgeExclude:
-  - '@vue/shared@3.5.44'
