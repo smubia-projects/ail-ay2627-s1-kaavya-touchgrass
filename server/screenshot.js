@@ -1,5 +1,5 @@
 const express = require('express')
-const { chatCompletion } = require('./ai-client')
+const { chatCompletion, aiConfigured } = require('./ai-client')
 const { singaporeDate, submissionStatus } = require('./check-in-dates')
 
 class ScreenshotError extends Error {
@@ -15,8 +15,8 @@ async function analyzeScreenshot(image, { env = process.env, fetchImpl = fetch }
     throw new ScreenshotError(400, 'Upload a PNG, JPEG, or WebP screenshot.')
   }
   if (image.length > 7 * 1024 * 1024) throw new ScreenshotError(413, 'Screenshot must be under 5 MB.')
-  if (!env.AI_API_KEY?.trim() || !env.AI_BASE_URL || !env.AI_MODEL) {
-    throw new ScreenshotError(503, 'Screenshot analysis is not configured. Set AI_BASE_URL, AI_MODEL, and AI_API_KEY on the backend.')
+  if (!aiConfigured(env)) {
+    throw new ScreenshotError(500, 'Screenshot analysis is not configured. Set OPENROUTER_API_KEY on the backend.')
   }
   const extractedAt = new Date()
   const data = await chatCompletion({

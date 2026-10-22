@@ -12,16 +12,16 @@ test('structured AI output must have three distinct bounded matching activities'
   for (const invalid of [activities.slice(0,2),[activities[0],activities[0],activities[2]],activities.map(a=>({...a,minutes:30})),activities.map(a=>({...a,location:'outdoors'})),activities.map(a=>({...a,firstStep:''}))]) assert.throws(()=>validateActivities({activities:invalid},prefs))
 })
 test('uses configured private backend AI client and sends only preferences plus fixed instructions', async () => {
-  const env={ AI_API_KEY:'private-test-key', AI_BASE_URL:'https://example.test/v1', AI_MODEL:'gpt-4o-mini' }
+  const env={ OPENROUTER_API_KEY:'private-test-key', OPENROUTER_MODEL:'openai/gpt-4o-mini' }
   const result=await suggestActivities(prefs,{env,fetchImpl:async(url,request)=>{
-    assert.equal(url,'https://example.test/v1/chat/completions')
+    assert.equal(url,'https://openrouter.ai/api/v1/chat/completions')
     const body=JSON.parse(request.body)
     assert.deepEqual(JSON.parse(body.messages[1].content.slice(body.messages[1].content.indexOf('{'))),prefs)
     assert.equal(body.response_format.type,'json_object')
     assert.ok(body.messages[0].content.includes('json'))
     assert.ok(body.messages[1].content.includes('json'))
-    assert.equal(body.model,env.AI_MODEL)
-    assert.ok(!JSON.stringify(body).includes(env.AI_API_KEY))
+    assert.equal(body.model,env.OPENROUTER_MODEL)
+    assert.ok(!JSON.stringify(body).includes(env.OPENROUTER_API_KEY))
     return { ok:true,json:async()=>({choices:[{message:{content:JSON.stringify({activities})}}]}) }
   }})
   assert.deepEqual(result,activities)
