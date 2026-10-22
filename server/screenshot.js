@@ -1,7 +1,6 @@
 const express = require('express')
 const { chatCompletion } = require('./ai-client')
 const { singaporeDate, submissionStatus } = require('./check-in-dates')
-const { signAnalysis } = require('./analysis-receipt')
 
 class ScreenshotError extends Error {
   constructor(status, message, providerStatus) {
@@ -43,8 +42,8 @@ async function analyzeScreenshot(image, { env = process.env, fetchImpl = fetch }
 const router = express.Router()
 router.post('/', express.json({ limit: '7mb' }), async (req, res) => {
   try {
-    const result = await analyzeScreenshot(req.body?.image)
-    res.json({ ...result, analysisToken: result.socialMediaMinutes === null || !result.submissionStatus ? null : signAnalysis({ ...result, userId: String(req.user._id) }) })
+    // Analyse only: the image lives in memory for this request and is never logged or saved.
+    res.json(await analyzeScreenshot(req.body?.image))
   } catch (error) {
     res.status(error.status || 500).json({ message: error.status ? error.message : 'Screenshot analysis failed.', ...(error.providerStatus ? { providerStatus: error.providerStatus } : {}) })
   }
