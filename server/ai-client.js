@@ -1,20 +1,21 @@
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
+const baseUrl = (env = process.env) => ((env.API_BASE_URL || env.OPENROUTER_BASE_URL)?.trim() || OPENROUTER_BASE_URL).replace(/\/+$/, '')
 // Cheap vision-capable default; override with OPENROUTER_MODEL (verified on openrouter.ai/api/v1/models).
 const DEFAULT_MODEL = 'openai/gpt-4o-mini'
 class AIError extends Error {
   constructor(status, message, providerStatus) { super(message); this.status = status; this.providerStatus = providerStatus }
 }
-function aiConfigured(env = process.env) { return !!env.OPENROUTER_API_KEY?.trim() }
+function aiConfigured(env = process.env) { return !!(env.API_KEY || env.OPENROUTER_API_KEY)?.trim() }
 async function chatCompletion({ messages, maxTokens = 500 }, { env = process.env, fetchImpl = fetch } = {}) {
   // 500, not 503: HTTP 503 is reserved for the rate-limit engine's "demo paused" kill switch.
   if (!aiConfigured(env)) throw new AIError(500, 'AI is not configured on the backend.')
   const signal = AbortSignal.timeout(60000)
   let response
   try {
-    response = await fetchImpl(`${OPENROUTER_BASE_URL}/chat/completions`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.OPENROUTER_API_KEY.trim()}`, 'X-Title': 'TouchGrass' },
+    response = await fetchImpl(`${baseUrl(env)}/chat/completions`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${(env.API_KEY || env.OPENROUTER_API_KEY).trim()}`, 'X-Title': 'TouchGrass' },
       signal,
-      body: JSON.stringify({ model: env.OPENROUTER_MODEL?.trim() || DEFAULT_MODEL, messages, response_format: { type: 'json_object' }, max_tokens: maxTokens })
+      body: JSON.stringify({ model: (env.MODEL_NAME || env.OPENROUTER_MODEL)?.trim() || DEFAULT_MODEL, messages, response_format: { type: 'json_object' }, max_tokens: maxTokens })
     })
   } catch (error) {
     throw new AIError(signal.aborted || error.name === 'TimeoutError' ? 504 : 502, signal.aborted || error.name === 'TimeoutError' ? 'AI provider timed out. Please retry.' : 'Could not reach the AI provider. Check backend connectivity.')

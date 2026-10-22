@@ -44,7 +44,7 @@ The bundled fixture (`client-vue/src/demo/leaderboard.json`) is generated offlin
 
 ## 4. AI Integration
 
-The backend calls **OpenRouter** (`https://openrouter.ai/api/v1/chat/completions`) with the model in `OPENROUTER_MODEL` (default `openai/gpt-4o-mini`, the model the extraction prompt was tuned for; the original submission used it through APIyi). Both calls request `response_format: json_object` and are validated server-side.
+The backend calls **OpenRouter** (`https://openrouter.ai/api/v1/chat/completions`) with the model in `MODEL_NAME` (default `openai/gpt-4o-mini`, the model the extraction prompt was tuned for; the original submission used it through APIyi). Both calls request `response_format: json_object` and are validated server-side.
 
 ```text
 Screenshot -> Analyse -> API validates the data URL -> rate limiter (bucket "vision")
@@ -77,7 +77,7 @@ Requires **Node.js 24.x** and npm.
 ```sh
 npm ci --prefix server
 npm ci --prefix client-vue
-cp server/.env.example server/.env          # then fill OPENROUTER_API_KEY
+cp server/.env.example server/.env          # then fill API_KEY
 cp client-vue/.env.example client-vue/.env  # VITE_API_BASE=http://localhost:8080
 npm run dev --prefix server                 # API on http://localhost:8080 (GET /api/health)
 npm run dev --prefix client-vue             # app on http://localhost:5173
@@ -97,7 +97,7 @@ npm run build --prefix client-vue
 
 ### Deployment (AI Lodge stack)
 
-- **API → Cloud Run:** `.github/workflows/deploy.yml` builds `server/` (Dockerfile, `node:24-slim`) on every push to `master`, pushes the image to Docker Hub and deploys service `ail-ay2627-s1-kaavya-touchgrass` in `asia-southeast3`. Runtime env comes from the `DOTENV` repo secret (`gh secret set DOTENV < server/.env`): `CORS_ORIGINS`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, and optionally `RATE_LIMIT_VISION_MAX`, `RATE_LIMIT_ACTIVITIES_MAX`, `RATE_LIMIT_WINDOW_SECONDS`.
+- **API → Cloud Run:** `.github/workflows/deploy.yml` builds `server/` (Dockerfile, `node:24-slim`) on every push to `master`, pushes the image to Docker Hub and deploys service `ail-ay2627-s1-kaavya-touchgrass` in `asia-southeast3`. Runtime env comes from the `DOTENV` repo secret (`gh secret set DOTENV < server/.env`): `CORS_ORIGINS`, `API_KEY`, `MODEL_NAME`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, and optionally `RATE_LIMIT_VISION_MAX`, `RATE_LIMIT_ACTIVITIES_MAX`, `RATE_LIMIT_WINDOW_SECONDS`.
 - **Frontend → Vercel:** Root Directory `client-vue` (build settings in `vercel.json`), env `VITE_API_BASE` = the Cloud Run URL.
 - **Rate limits:** buckets `vision` and `activities` for project `ail-ay2627-s1-kaavya-touchgrass` (default 5 per IP per 5 days until the central sheet overrides them). A 429 shows the AI Lodge CTA; a 503 means the demo was paused by the kill switch.
 
