@@ -44,7 +44,7 @@ The bundled fixture (`client-vue/src/demo/leaderboard.json`) is generated offlin
 
 ## 4. AI Integration
 
-The backend calls **OpenRouter** (`https://openrouter.ai/api/v1/chat/completions`) with the model in `MODEL_NAME` (default `openai/gpt-4o-mini`, the model the extraction prompt was tuned for; the original submission used it through APIyi). Both calls request `response_format: json_object` and are validated server-side.
+The backend calls **apiyi** (`https://api.apiyi.com/v1/chat/completions`) with the model in `MODEL_NAME` (default `gemini-3.5-flash-lite`, the model the extraction prompt was tuned for; the original submission used it through APIyi). Both calls request `response_format: json_object` and are validated server-side.
 
 ```text
 Screenshot -> Analyse -> API validates the data URL -> rate limiter (bucket "vision")

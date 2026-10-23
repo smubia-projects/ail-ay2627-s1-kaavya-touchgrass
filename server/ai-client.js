@@ -1,7 +1,7 @@
-const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
+const OPENROUTER_BASE_URL = 'https://api.apiyi.com/v1'
 const baseUrl = (env = process.env) => ((env.API_BASE_URL || env.OPENROUTER_BASE_URL)?.trim() || OPENROUTER_BASE_URL).replace(/\/+$/, '')
 // Cheap vision-capable default; override with OPENROUTER_MODEL (verified on openrouter.ai/api/v1/models).
-const DEFAULT_MODEL = 'openai/gpt-4o-mini'
+const DEFAULT_MODEL = 'gemini-3.5-flash-lite'
 class AIError extends Error {
   constructor(status, message, providerStatus) { super(message); this.status = status; this.providerStatus = providerStatus }
 }
