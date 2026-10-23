@@ -3,10 +3,10 @@ const assert = require('node:assert/strict')
 const { analyzeScreenshot } = require('./screenshot')
 
 const image = 'data:image/png;base64,aGVsbG8='
-const env = { OPENROUTER_MODEL: 'openai/gpt-4o-mini', OPENROUTER_API_KEY: 'test-secret' }
+const env = { OPENROUTER_MODEL: 'gemini-3.5-flash-lite', OPENROUTER_API_KEY: 'test-secret' }
 test('sends image data URL in Chat Completions format and parses usage', async () => {
   const result = await analyzeScreenshot(image, { env, fetchImpl: async (url, request) => {
-    assert.equal(url, 'https://openrouter.ai/api/v1/chat/completions')
+    assert.equal(url, 'https://api.apiyi.com/v1/chat/completions')
     const body = JSON.parse(request.body)
     assert.equal(body.model, env.OPENROUTER_MODEL)
     assert.equal(body.messages[0].content[1].image_url.url, image)

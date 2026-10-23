@@ -35,8 +35,8 @@ test('provider deadline covers response headers and response body reads with saf
 test('calls OpenRouter with the default vision model and reports a missing key as 500, never 503', async () => {
   let sent
   await chatCompletion(request, { env: { OPENROUTER_API_KEY: 'k' }, fetchImpl: async (url, options) => { sent = { url, body: JSON.parse(options.body), auth: options.headers.Authorization }; return { ok: true, status: 200, json: async () => ({ choices: [] }) } } })
-  assert.equal(sent.url, 'https://openrouter.ai/api/v1/chat/completions')
-  assert.equal(sent.body.model, 'openai/gpt-4o-mini')
+  assert.equal(sent.url, 'https://api.apiyi.com/v1/chat/completions')
+  assert.equal(sent.body.model, 'gemini-3.5-flash-lite')
   assert.equal(sent.body.response_format.type, 'json_object')
   assert.equal(sent.auth, 'Bearer k')
   await assert.rejects(chatCompletion(request, { env: {} }), error => error.status === 500 && /not configured/.test(error.message))

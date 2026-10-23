@@ -12,9 +12,9 @@ test('structured AI output must have three distinct bounded matching activities'
   for (const invalid of [activities.slice(0,2),[activities[0],activities[0],activities[2]],activities.map(a=>({...a,minutes:30})),activities.map(a=>({...a,location:'outdoors'})),activities.map(a=>({...a,firstStep:''}))]) assert.throws(()=>validateActivities({activities:invalid},prefs))
 })
 test('uses configured private backend AI client and sends only preferences plus fixed instructions', async () => {
-  const env={ OPENROUTER_API_KEY:'private-test-key', OPENROUTER_MODEL:'openai/gpt-4o-mini' }
+  const env={ OPENROUTER_API_KEY:'private-test-key', OPENROUTER_MODEL:'gemini-3.5-flash-lite' }
   const result=await suggestActivities(prefs,{env,fetchImpl:async(url,request)=>{
-    assert.equal(url,'https://openrouter.ai/api/v1/chat/completions')
+    assert.equal(url,'https://api.apiyi.com/v1/chat/completions')
     const body=JSON.parse(request.body)
     assert.deepEqual(JSON.parse(body.messages[1].content.slice(body.messages[1].content.indexOf('{'))),prefs)
     assert.equal(body.response_format.type,'json_object')
