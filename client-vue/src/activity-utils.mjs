@@ -1,5 +1,6 @@
 export const interestOptions = ['outdoors', 'fitness', 'creative', 'relaxing', 'social']
-export function storageKey(group, member) { return `touchgrass-activities:${encodeURIComponent(group)}:${encodeURIComponent(member)}` }
+// Browser-local only (no accounts); prefixed with the project slug.
+export const storageKey = 'ail-ay2627-s1-kaavya-touchgrass:activities'
 export function builtInActivities(prefs) {
   const place = prefs.location === 'outdoors' ? 'in a familiar outdoor space' : 'in a comfortable indoor space'
   const together = prefs.company === 'friends' ? 'with your friends' : 'on your own'

@@ -3,12 +3,12 @@ import { CalendarDays, Clock, PenLine, ChevronLeft, ChevronRight, BookOpen } fro
 import EmptySprout from './EmptySprout.vue'
 import { ref, computed, watch } from 'vue'
 import { dateKey, weekDates, duration, usageHours } from '../diary-utils.mjs'
-const props = defineProps({ accountId: { type: String, required: true } })
 const today = dateKey(new Date())
 const date = ref(today), week = ref(today), hours = ref(''), minutes = ref(''), note = ref('')
 const loadFailed = ref(false)
 const entries = ref([]), errorMessage = ref(''), successMessage = ref('')
-const storageKey = computed(() => 'touchgrass-diary:account:' + props.accountId)
+// Browser-local only (no accounts); prefixed with the project slug.
+const storageKey = 'ail-ay2627-s1-kaavya-touchgrass:diary'
 const days = computed(() => weekDates(week.value))
 const entryFor = key => entries.value.find(entry => entry.date === key)
 const existing = computed(() => entryFor(date.value))
@@ -23,15 +23,16 @@ function loadDay() {
   note.value = entry?.note || ''
   successMessage.value = ''
 }
-watch(storageKey, () => {
+function load() {
   entries.value = []; errorMessage.value = ''; loadFailed.value = false
   try {
-    const saved = JSON.parse(localStorage.getItem(storageKey.value) || '[]')
+    const saved = JSON.parse(localStorage.getItem(storageKey) || '[]')
     if (!Array.isArray(saved) || !saved.every(e => e && /^\d{4}-\d{2}-\d{2}$/.test(e.date) && typeof e.hours === 'number' && Number.isFinite(e.hours) && e.hours >= 0 && e.hours <= 24 && typeof e.note === 'string')) throw Error()
     entries.value = saved
   } catch { loadFailed.value = true; errorMessage.value = 'Could not load your saved diary. Existing browser data has not been changed.' }
   date.value = today; week.value = today; loadDay()
-}, { immediate: true })
+}
+load()
 watch(date, () => { week.value = date.value; loadDay() })
 function moveWeek(offset) {
   const next = new Date(`${days.value[0]}T12:00:00`)
@@ -49,7 +50,7 @@ function saveEntry() {
   const updated = entries.value.filter(entry => entry.date !== date.value)
   updated.push({ date: date.value, hours: value, note: note.value.trim() })
   try {
-    localStorage.setItem(storageKey.value, JSON.stringify(updated))
+    localStorage.setItem(storageKey, JSON.stringify(updated))
     entries.value = updated; errorMessage.value = ''
     successMessage.value = updating ? 'Entry updated.' : 'Entry saved.'
   } catch { errorMessage.value = 'Could not save. Browser storage may be unavailable.' }
@@ -61,8 +62,8 @@ function saveEntry() {
     <div class="card-body p-4">
       <h2 class="feature-heading"><span class="feature-icon feature-sage"><BookOpen class="icon-card" aria-hidden="true" /></span>My usage diary</h2>
       <p>A little reflection on your total phone usage.</p>
-      <p class="storage-note">Saved in this browser · Personal to your account</p>
-      <details class="data-disclosure"><summary>About your data</summary><p>Entries stay in this browser for your signed-in account; they do not sync across devices. Clearing browser data removes them. These manual logs are personal reflections and never count towards group rankings.</p></details>
+      <p class="storage-note">Saved in this browser only</p>
+      <details class="data-disclosure"><summary>About your data</summary><p>Entries stay in this browser; they are never sent to the server and do not sync across devices. Clearing browser data removes them. These manual logs are personal reflections and never count towards group rankings.</p></details>
       <div class="diary-layout">
         <section class="weekly-overview" aria-labelledby="weekly-title">
           <div class="week-heading"><h3 id="weekly-title"><CalendarDays class="icon-control" aria-hidden="true" /> Your week</h3><div class="week-arrows"><button type="button" aria-label="Previous week" @click="moveWeek(-1)"><ChevronLeft class="icon-control" aria-hidden="true" /></button><button type="button" aria-label="Next week" @click="moveWeek(1)"><ChevronRight class="icon-control" aria-hidden="true" /></button></div></div>
