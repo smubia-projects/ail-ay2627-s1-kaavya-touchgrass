@@ -38,3 +38,22 @@ test('each upload sends its own image and returns its own provider values', asyn
     assert.equal(result.socialMediaMinutes, values[i])
   }
 })
+
+test('router checks input before the shared limiter and never echoes the image', async () => {
+  const express = require('express')
+  const request = require('supertest')
+  const { createScreenshotRouter } = require('./screenshot')
+  const saved = process.env.OPENROUTER_API_KEY
+  process.env.OPENROUTER_API_KEY = 'test-only'
+  let limited = 0
+  const app = express()
+  app.use(createScreenshotRouter({ limit: (req, res, next) => { limited++; next() }, analyze: async () => ({ date: null, submissionStatus: null, socialMediaMinutes: 30, notes: 'ok' }) }))
+  try {
+    assert.equal((await request(app).post('/').send({ image: 'not-an-image' })).status, 400)
+    assert.equal(limited, 0)
+    const response = await request(app).post('/').send({ image })
+    assert.equal(response.status, 200)
+    assert.equal(limited, 1)
+    assert.ok(!JSON.stringify(response.body).includes(image))
+  } finally { if (saved === undefined) delete process.env.OPENROUTER_API_KEY; else process.env.OPENROUTER_API_KEY = saved }
+})

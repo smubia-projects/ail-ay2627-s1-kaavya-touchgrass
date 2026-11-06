@@ -1,5 +1,5 @@
 const express = require('express')
-const { chatCompletion, AIError } = require('./ai-client')
+const { chatCompletion, AIError, aiConfigured } = require('./ai-client')
 const interests = ['outdoors', 'fitness', 'creative', 'relaxing', 'social']
 function validatePreferences(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).sort().join(',') !== 'company,interests,location,minutes' ||
@@ -28,26 +28,16 @@ async function suggestActivities(value, options) {
   try { return validateActivities(JSON.parse(data.choices[0].message.content), prefs) }
   catch { throw new AIError(502, 'AI returned invalid activity suggestions. Retry or use built-in suggestions.') }
 }
-function createActivityRouter({ suggest = suggestActivities, now = Date.now } = {}) {
+function createActivityRouter({ suggest = suggestActivities, limit = (req, res, next) => next(), env = process.env } = {}) {
   const router = express.Router()
-  const clients = new Map()
-  // Per backend process/IP: five attempts per ten minutes; one in flight.
-  router.post('/', async (req, res) => {
-    let prefs
-    try { prefs = validatePreferences(req.body) } catch (error) { return res.status(400).json({ message: error.message }) }
-    const time = now()
-    for (const [key, state] of clients) if (!state.busy && state.reset <= time) clients.delete(key)
-    const key = req.ip
-    let state = clients.get(key)
-    if (!state) { state = { count: 0, reset: time + 600000, busy: false }; clients.set(key,state) }
-    if (state.busy || state.count >= 5 || clients.size > 10000) {
-      res.set('Retry-After', String(state.busy ? 5 : Math.max(1,Math.ceil((state.reset-time)/1000))))
-      return res.status(429).json({ message: state.busy ? 'An activity request is already running. Please wait.' : 'Activity request limit reached. Try again later or use built-in suggestions.' })
-    }
-    state.count++; state.busy = true
-    try { res.json({ source: 'ai', activities: await suggest(prefs) }) }
+  // Validate and check configuration before the shared rate limiter, so bad input never uses quota.
+  router.post('/', (req, res, next) => {
+    try { req.preferences = validatePreferences(req.body) } catch (error) { return res.status(400).json({ message: error.message }) }
+    if (suggest === suggestActivities && !aiConfigured(env)) return res.status(500).json({ message: 'AI is not configured on the backend. Use built-in suggestions.' })
+    next()
+  }, limit, async (req, res) => {
+    try { res.json({ source: 'ai', activities: await suggest(req.preferences) }) }
     catch (error) { res.status(error.status || 502).json({ message: error.status ? error.message : 'Activity suggestions failed. Retry or use built-in suggestions.' }) }
-    finally { state.busy = false }
   })
   return router
 }
