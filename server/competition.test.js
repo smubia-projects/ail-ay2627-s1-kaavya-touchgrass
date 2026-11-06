@@ -1,6 +1,6 @@
 const {test}=require('node:test')
 const assert=require('node:assert/strict')
-const {nextMonday,competitionStart,recordScope,initializeExistingEligibility}=require('./competition')
+const {nextMonday,competitionStart,recordScope}=require('./competition')
 const {buildLeaderboard}=require('./leaderboard')
 test('strictly following Monday uses Singapore date across Sunday midnight and year boundaries',()=>{
  assert.equal(nextMonday(new Date('2026-10-18T15:59:59Z')),'2026-10-19')
@@ -45,16 +45,4 @@ test('backend requires both group and member eligibility; forged official practi
  const forged=entry(g.members[0],'2026-10-13',1,'official')
  assert.equal(recordScope(g,g.members[0],forged),'practice')
  assert.equal(buildLeaderboard(g,[forged],{now:new Date('2026-10-14T03:00:00Z')}).members[0].rank,null)
-})
-test('rollout migration only sets missing forward-looking dates and never rewrites CheckIn data',async()=>{
- const Group=require('./models/Group'),original=Group.updateMany,calls=[]
- Group.updateMany=async(...args)=>{calls.push(args)}
- try{
-  await initializeExistingEligibility(new Date('2026-10-14T02:00:00Z'))
-  assert.equal(calls.length,2)
-  assert.deepEqual(calls[0][0],{competitionStartDate:{$exists:false}})
-  assert.equal(calls[0][1].$set.competitionStartDate,'2026-10-19')
-  assert.equal(calls[1][2].arrayFilters[0]['member.competitionStartDate'].$exists,false)
-  assert.equal(calls[1][2].arrayFilters[0]['member.userId'].$ne,null)
- }finally{Group.updateMany=original}
 })

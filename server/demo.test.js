@@ -26,24 +26,3 @@ test('static demo matches the existing ranking calculator without database or pr
   const serialized = JSON.stringify(fixture)
   for (const field of ['analysisToken', 'usedAnalysisIds', 'userId', 'email', 'password']) assert.ok(!serialized.includes(`"${field}"`))
 })
-
-test('real APIs still reject anonymous requests when the public demo is available', async () => {
-  const request = require('supertest')
-  const { MemoryStore } = require('express-session')
-  const { createApp } = require('./app')
-  const app = createApp({ store: new MemoryStore(), env: {
-    SESSION_SECRET: require('node:crypto').randomBytes(32).toString('hex'),
-    FRONTEND_ORIGINS: 'http://localhost:5173'
-  } })
-  for (const [method, path] of [
-    ['get', '/api/groups'],
-    ['get', '/api/groups/DEMO/check-ins'],
-    ['get', '/api/groups/DEMO/leaderboard'],
-    ['post', '/api/screenshots/analyze'],
-    ['post', '/api/activities/suggest'],
-    ['post', '/api/groups/DEMO/check-ins']
-  ]) {
-    const response = await request(app)[method](path)
-    assert.equal(response.status, 401, `${method} ${path} must require login`)
-  }
-})

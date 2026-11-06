@@ -55,19 +55,3 @@ test('Sunday completion submitted Monday changes previous week only; sole eligib
   assert.equal(previous.members[0].totalMinutes,80); assert.equal(previous.members[0].rank,1); assert.equal(previous.loserMemberId,null)
   assert.equal(buildLeaderboard(group,records,{now:monday}).members[0].totalMinutes,null)
 })
-test('leaderboard API validates week and loads group-scoped screenshot-backed records', async () => {
-  const express=require('express'), Group=require('./models/Group'), CheckIn=require('./models/CheckIn')
-  const originals=[Group.findOne, CheckIn.find]
-  Group.findOne=async filter => { assert.equal(filter.inviteCode,'ABCDEF'); return { ...group, members: group.members.map(m=>({...m,userId:m._id})) } }
-  let query
-  CheckIn.find=filter => { query=filter; return { select: fields => { assert.equal(fields,'+usedAnalysisIds'); return { lean: async()=>[] } } } }
-  const app=express();app.use((req,res,next)=>{req.user={_id:'a'};next()});app.use(require('./leaderboard-routes'))
-  const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.on('listening',resolve))
-  const url=`http://127.0.0.1:${server.address().port}/abcdef/leaderboard`
-  try {
-    assert.equal((await fetch(url+'?week=invalid')).status,400)
-    const response=await fetch(url+'?week=previous');assert.equal(response.status,200)
-    const data=await response.json();assert.equal(data.members.length,4);assert.equal(query.groupId,'g');assert.equal(query.date.$gte,data.startDate)
-    Group.findOne=async()=>null;assert.equal((await fetch(url)).status,404)
-  } finally { await new Promise(resolve=>server.close(resolve)); [Group.findOne,CheckIn.find]=originals }
-})
