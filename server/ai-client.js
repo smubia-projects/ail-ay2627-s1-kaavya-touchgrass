@@ -1,10 +1,12 @@
 const OPENROUTER_BASE_URL = 'https://api.apiyi.com/v1'
 const baseUrl = (env = process.env) => ((env.API_BASE_URL || env.OPENROUTER_BASE_URL)?.trim() || OPENROUTER_BASE_URL).replace(/\/+$/, '')
-// Cheap vision-capable default; override with OPENROUTER_MODEL (verified on openrouter.ai/api/v1/models).
-const DEFAULT_MODEL = 'gemini-3.5-flash-lite'
+// Cheap vision-capable default (the AI Lodge default); override with MODEL_NAME.
+const DEFAULT_MODEL = 'deepseek-v4-1-flash-260910'
 class AIError extends Error {
   constructor(status, message, providerStatus) { super(message); this.status = status; this.providerStatus = providerStatus }
 }
+// DeepSeek thinks first by default; every call here has a 60 s timeout, so thinking is switched off for it.
+const requestBody = (model, messages, maxTokens) => ({ model, messages, response_format: { type: 'json_object' }, max_tokens: maxTokens, ...(/deepseek/i.test(model) ? { reasoning_effort: 'none' } : {}) })
 function aiConfigured(env = process.env) { return !!(env.API_KEY || env.OPENROUTER_API_KEY)?.trim() }
 async function chatCompletion({ messages, maxTokens = 500 }, { env = process.env, fetchImpl = fetch } = {}) {
   // 500, not 503: HTTP 503 is reserved for the rate-limit engine's "demo paused" kill switch.
@@ -15,7 +17,7 @@ async function chatCompletion({ messages, maxTokens = 500 }, { env = process.env
     response = await fetchImpl(`${baseUrl(env)}/chat/completions`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${(env.API_KEY || env.OPENROUTER_API_KEY).trim()}`, 'X-Title': 'TouchGrass' },
       signal,
-      body: JSON.stringify({ model: (env.MODEL_NAME || env.OPENROUTER_MODEL)?.trim() || DEFAULT_MODEL, messages, response_format: { type: 'json_object' }, max_tokens: maxTokens })
+      body: JSON.stringify(requestBody((env.MODEL_NAME || env.OPENROUTER_MODEL)?.trim() || DEFAULT_MODEL, messages, maxTokens))
     })
   } catch (error) {
     throw new AIError(signal.aborted || error.name === 'TimeoutError' ? 504 : 502, signal.aborted || error.name === 'TimeoutError' ? 'AI provider timed out. Please retry.' : 'Could not reach the AI provider. Check backend connectivity.')
